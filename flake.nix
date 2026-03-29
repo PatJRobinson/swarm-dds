@@ -21,6 +21,7 @@
           gcc
           gnumake
           pkg-config
+          bear
           cyclonedds
           gdb
           valgrind

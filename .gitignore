@@ -1,5 +1,7 @@
 .direnv/
 .envrc
+.cache/
+compile_commands.json
 generated/
 bin/
 src/AgentState.h
