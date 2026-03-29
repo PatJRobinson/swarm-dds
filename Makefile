@@ -3,19 +3,25 @@ CFLAGS := -std=c11 -O2 -Wall -Wextra -pedantic
 PKG_CFLAGS := $(shell pkg-config --cflags ddsc 2>/dev/null || pkg-config --cflags CycloneDDS)
 PKG_LIBS := $(shell pkg-config --libs ddsc 2>/dev/null || pkg-config --libs CycloneDDS)
 
+ROOT_DIR := $(abspath .)
 SRC_DIR := src
+GEN_DIR := generated
 BIN_DIR := bin
 
 IDL := AgentState.idl
-GEN_C := $(SRC_DIR)/AgentState.c
-GEN_H := $(SRC_DIR)/AgentState.h
+IDL_SRC := $(ROOT_DIR)/$(SRC_DIR)/$(IDL)
+GEN_C := $(GEN_DIR)/AgentState.c
+GEN_H := $(GEN_DIR)/AgentState.h
 
 TARGETS := $(BIN_DIR)/agent $(BIN_DIR)/viewer
 
 all: $(TARGETS)
 
-$(GEN_C) $(GEN_H): $(SRC_DIR)/$(IDL)
-	cd src && idlc -l c $(IDL)
+$(GEN_DIR):
+	mkdir -p $(GEN_DIR)
+
+$(GEN_C) $(GEN_H): $(SRC_DIR)/$(IDL) | $(GEN_DIR)
+	cd $(GEN_DIR) && idlc -l c $(IDL_SRC)
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -30,6 +36,6 @@ run: all
 	./run.sh
 
 clean:
-	rm -f $(TARGETS) $(GEN_C) $(GEN_H)
+	rm -rf $(TARGETS) $(GEN_C) $(GEN_H) $(GEN_DIR) $(BIN_DIR)
 
 .PHONY: all clean run
