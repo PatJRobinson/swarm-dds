@@ -1,0 +1,10 @@
+module swarm {
+  struct AgentState {
+    long id;
+    double x;
+    double y;
+    double vx;
+    double vy;
+    long long ts_ms;
+  };
+};

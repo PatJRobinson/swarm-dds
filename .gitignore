@@ -1,0 +1,5 @@
+.direnv/
+.envrc
+bin/
+src/AgentState.h
+src/AgentState.c
