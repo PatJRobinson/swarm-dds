@@ -12,6 +12,23 @@
 
 #include "AgentState.h"
 
+static void debug_log(int self_id, dds_entity_t writer, dds_entity_t reader) {
+  static int tick = 0;
+  tick++;
+  if (tick % 10 == 0) {
+    dds_publication_matched_status_t pub_status;
+    dds_subscription_matched_status_t sub_status;
+
+    int prc = dds_get_publication_matched_status(writer, &pub_status);
+    int src = dds_get_subscription_matched_status(reader, &sub_status);
+
+    printf("agent %d: pub current=%d total=%d | sub current=%d total=%d\n",
+           self_id, pub_status.current_count, pub_status.total_count,
+           sub_status.current_count, sub_status.total_count);
+    fflush(stdout);
+  }
+}
+
 static volatile sig_atomic_t g_stop = 0;
 
 static void handle_sigint(int sig) {
@@ -90,6 +107,9 @@ int main(int argc, char **argv) {
     fprintf(stderr, "dds_create_reader failed: %s\n", dds_strretcode(-reader));
     return 1;
   }
+  printf("agent %d waiting for discovery...\n", self_id);
+  fflush(stdout);
+  sleep(2);
 
   enum { MAX_SAMPLES = 32 };
   void *samples[MAX_SAMPLES];
@@ -100,6 +120,7 @@ int main(int argc, char **argv) {
   }
 
   printf("agent %d started at (%.2f, %.2f)\n", self_id, x, y);
+  fflush(stdout);
 
   const double dt = 0.10;
   const double cohesion = 0.015;
@@ -108,6 +129,9 @@ int main(int argc, char **argv) {
   const double avoid_radius = 1.5;
 
   while (!g_stop) {
+
+    // debug_log(self_id, writer, reader);
+
     int rc = dds_take(reader, samples, infos, MAX_SAMPLES, MAX_SAMPLES);
     if (rc < 0) {
       fprintf(stderr, "dds_take failed: %s\n", dds_strretcode(-rc));
@@ -124,6 +148,7 @@ int main(int argc, char **argv) {
       }
 
       swarm_AgentState *other = (swarm_AgentState *)samples[i];
+
       if (other->id == self_id) {
         continue;
       }
@@ -142,6 +167,7 @@ int main(int argc, char **argv) {
         ay -= dy / dist;
       }
     }
+    fflush(stdout);
 
     if (count > 0) {
       cx /= count;

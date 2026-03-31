@@ -34,6 +34,7 @@
           echo "Try:"
           echo "  pkg-config --cflags --libs cyclonedds"
           echo "  make"
+          export CYCLONEDDS_URI=file://$PWD/cyclonedds.xml
         '';
       };
     });

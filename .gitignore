@@ -6,3 +6,4 @@ generated/
 bin/
 src/AgentState.h
 src/AgentState.c
+logs/

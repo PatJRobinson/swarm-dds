@@ -34,6 +34,75 @@ typedef struct {
   int64_t ts_ms;
 } agent_snapshot_t;
 
+static void draw_map(agent_snapshot_t *agents, int64_t now) {
+  enum { MAP_W = 61, MAP_H = 21, MAX_AGENTS = 256 };
+  char grid[MAP_H][MAP_W + 1];
+
+  const double world_min_x = -20.0;
+  const double world_max_x = 20.0;
+  const double world_min_y = -20.0;
+  const double world_max_y = 20.0;
+
+  for (int y = 0; y < MAP_H; y++) {
+    for (int x = 0; x < MAP_W; x++) {
+      grid[y][x] = '.';
+    }
+    grid[y][MAP_W] = '\0';
+  }
+
+  int axis_x =
+      (int)((0.0 - world_min_x) / (world_max_x - world_min_x) * (MAP_W - 1));
+  int axis_y =
+      (int)((world_max_y - 0.0) / (world_max_y - world_min_y) * (MAP_H - 1));
+
+  if (axis_x >= 0 && axis_x < MAP_W) {
+    for (int y = 0; y < MAP_H; y++) {
+      grid[y][axis_x] = '|';
+    }
+  }
+  if (axis_y >= 0 && axis_y < MAP_H) {
+    for (int x = 0; x < MAP_W; x++) {
+      grid[axis_y][x] = '-';
+    }
+  }
+  if (axis_x >= 0 && axis_x < MAP_W && axis_y >= 0 && axis_y < MAP_H) {
+    grid[axis_y][axis_x] = '+';
+  }
+
+  for (int i = 0; i < MAX_AGENTS; i++) {
+    if (!agents[i].seen) {
+      continue;
+    }
+
+    int64_t age = now - agents[i].ts_ms;
+    if (age > 2000) {
+      continue;
+    }
+
+    double nx = (agents[i].x - world_min_x) / (world_max_x - world_min_x);
+    double ny = (world_max_y - agents[i].y) / (world_max_y - world_min_y);
+
+    int gx = (int)(nx * (MAP_W - 1));
+    int gy = (int)(ny * (MAP_H - 1));
+
+    if (gx < 0)
+      gx = 0;
+    if (gx >= MAP_W)
+      gx = MAP_W - 1;
+    if (gy < 0)
+      gy = 0;
+    if (gy >= MAP_H)
+      gy = MAP_H - 1;
+
+    grid[gy][gx] = (char)('0' + (i % 10));
+  }
+
+  printf("Map view (x,y in roughly [-20,20], stale >2s hidden)\n");
+  for (int y = 0; y < MAP_H; y++) {
+    printf("%s\n", grid[y]);
+  }
+}
+
 int main(void) {
   signal(SIGINT, handle_sigint);
 
@@ -101,13 +170,16 @@ int main(void) {
       agents[msg->id].ts_ms = msg->ts_ms;
     }
 
+    int64_t t = now_ms();
+
     printf("\033[2J\033[H");
     printf("DDS swarm viewer  |  Ctrl-C to quit\n");
-    printf("--------------------------------------------------------------\n");
+    printf("==============================================================\n");
+    draw_map(agents, t);
+    printf("==============================================================\n");
     printf("%-6s %-10s %-10s %-10s %-10s %-10s\n", "id", "x", "y", "vx", "vy",
            "age_ms");
 
-    int64_t t = now_ms();
     for (int i = 0; i < MAX_AGENTS; i++) {
       if (!agents[i].seen) {
         continue;
@@ -118,6 +190,7 @@ int main(void) {
     }
 
     fflush(stdout);
+
     struct timespec req;
     req.tv_sec = 0;
     req.tv_nsec = 200000000L;
